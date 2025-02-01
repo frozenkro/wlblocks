@@ -54,7 +54,7 @@ fn xdg_surface_configure_handler(_: ?*anyopaque, xs: ?*xdg_shell.xdg_surface, se
 
 const xdg_surface_listener: xdg_shell.xdg_surface_listener = .{ .configure = xdg_surface_configure_handler };
 
-fn xdg_toplevel_configure_handler(_: ?*anyopaque, _: ?*xdg_shell.xdg_toplevel, width: i32, height: i32, _: xdg_shell.wl_array) callconv(.C) void {
+fn xdg_toplevel_configure_handler(_: ?*anyopaque, _: ?*xdg_shell.xdg_toplevel, width: i32, height: i32, _: [*c]xdg_shell.wl_array) callconv(.C) void {
     stdout.print("xdg toplevel configure: {d}x{d}\n", .{ width, height }) catch |err| {
         std.debug.print("Error when printing to console: {any}\n", .{err});
     };
@@ -78,10 +78,20 @@ pub fn main() !void {
 
     // Get the registry to find available protocols
     registry = wl.wl_display_get_registry(display) orelse return error.GetRegistryFailed;
-    _ = wl.wl_registry_add_listener(registry, &registry_listener, null);
+    const add_listener_result = wl.wl_registry_add_listener(registry, &registry_listener, null);
+    if (add_listener_result != 0) {
+        return error.AddListenerFailed;
+    }
 
-    _ = wl.wl_display_dispatch(display);
-    _ = wl.wl_display_roundtrip(display);
+    const dispatch_result = wl.wl_display_dispatch(display);
+    if (dispatch_result == -1) {
+        return error.DispatchFailed;
+    }
+
+    const roundtrip_result = wl.wl_display_roundtrip(display);
+    if (roundtrip_result == -1) {
+        return error.RoundtripFailed;
+    }
 
     if (compositor == null) {
         return error.CompositorConnectFailed;
