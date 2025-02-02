@@ -9,7 +9,10 @@ const ShmError = error{
     Enoent,
     NoFd,
     NoFlags,
+    FileSizeError,
 };
+
+const CreateAnonymousFileError = std.fmt.BufPrintError || posix.TruncateError || ShmError;
 
 fn set_cloexec_or_close(fd: usize) ShmError!usize {
     if (fd == -1) {
@@ -34,16 +37,26 @@ fn create_tmpfile_cloexec(tmpname: *u8) !usize {
     }
 }
 
-fn os_create_anonymous_file(size: u64) ShmError!usize {
+fn os_create_anonymous_file(size: u64) CreateAnonymousFileError!usize {
     const template: []u8 = "/wlblocks-shared-XXXXXX";
-    const name: *u8 = null;
-    var fd: usize = 0;
 
     const path: []u8 = posix.getenv("XDG_RUNTIME_DIR");
     if (path == null) {
         return ShmError.Enoent;
     }
 
+    const buf: [path.len + template.len]u8 = undefined;
+    const name = try std.fmt.bufPrint(&buf, "{s}{s}", .{ path, template });
 
+    const fd = try create_tmpfile_cloexec(name);
+    if (fd == -1) {
+        return ShmError.NoFd;
+    }
 
+    if (try posix.ftruncate(@intCast(fd), size) < 0) {
+        posix.close(fd);
+        return ShmError.FileSizeError;
+    }
+
+    return fd;
 }
