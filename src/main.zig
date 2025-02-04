@@ -12,6 +12,9 @@ var display: ?*wl.struct_wl_display = null;
 var registry: ?*wl.struct_wl_registry = null;
 var compositor: ?*wl.struct_wl_compositor = null;
 var surface: ?*wl.struct_wl_surface = null;
+var shm: ?*wl.wl_shm = null;
+var buffer: ?*wl.wl_buffer = null;
+var shm_data: ?*anyopaque = null;
 
 var xdg_wm_base: ?*xdg_shell.xdg_wm_base = null; // base of xdg shell protocol
 var xdg_surface: ?*xdg_shell.xdg_surface = null; // based on wl_surface
@@ -19,9 +22,13 @@ var xdg_toplevel: ?*xdg_shell.xdg_toplevel = null; // an xdg surface role
 
 var c_int_res: c_int = 0;
 
+fn print_err(err: anyerror) void {
+    std.debug.print("Error when printing to console: {any}\n", .{err});
+}
+
 fn global_registry_handler(_: ?*anyopaque, _: ?*wl.struct_wl_registry, id: u32, interface: [*c]const u8, version: u32) callconv(.C) void {
     stdout.print("Received registry event for <{s}>, id: {d}, version: {d}.\n", .{ interface, id, version }) catch |err| {
-        std.debug.print("Error when printing to console: {any}\n", .{err});
+        print_err(err);
     };
 
     const intZ: [:0]const u8 = std.mem.span(interface);
@@ -31,12 +38,15 @@ fn global_registry_handler(_: ?*anyopaque, _: ?*wl.struct_wl_registry, id: u32, 
     } else if (std.mem.eql(u8, intZ, "xdg_wm_base")) {
         const xdg_base_opq: ?*anyopaque = xdg_shell.wl_registry_bind(@ptrCast(registry), id, &xdg_shell.xdg_wm_base_interface, 1);
         xdg_wm_base = @ptrCast(xdg_base_opq);
+    } else if (std.mem.eql(u8, intZ, "wl_shm")) {
+        shm = wl.wl_registry_bind(registry, id, &wl.wl_shm_interface, 1);
+        wl.wl_shm_add_listener(shm, &wl.wl_shm_listener, null);
     }
 }
 
 fn global_registry_remove_handler(_: ?*anyopaque, _: ?*wl.struct_wl_registry, id: u32) callconv(.C) void {
     stdout.print("Received registry remove event for id: {d}", .{id}) catch |err| {
-        std.debug.print("Error when printing to console: {any}\n", .{err});
+        print_err(err);
     };
 }
 
@@ -56,19 +66,27 @@ const xdg_surface_listener: xdg_shell.xdg_surface_listener = .{ .configure = xdg
 
 fn xdg_toplevel_configure_handler(_: ?*anyopaque, _: ?*xdg_shell.xdg_toplevel, width: i32, height: i32, _: [*c]xdg_shell.wl_array) callconv(.C) void {
     stdout.print("xdg toplevel configure: {d}x{d}\n", .{ width, height }) catch |err| {
-        std.debug.print("Error when printing to console: {any}\n", .{err});
+        print_err(err);
     };
 }
 
 fn xdg_toplevel_close_handler(_: ?*anyopaque, _: ?*xdg_shell.xdg_toplevel) callconv(.C) void {
     stdout.print("closing xdg toplevel", .{}) catch |err| {
-        std.debug.print("Error when printing to console: {any}\n", .{err});
+        print_err(err);
     };
 }
 
 const xdg_toplevel_listener: xdg_shell.xdg_toplevel_listener = .{
     .configure = xdg_toplevel_configure_handler,
     .close = xdg_toplevel_close_handler,
+};
+
+fn shm_format_handler(_: ?*anyopaque, _: ?*wl.wl_shm, format: u32) callconv(.C) void {
+    stdout.print("Format {d}\n", .{format}) catch |err| print_err(err);
+}
+
+const shm_listener: wl.wl_shm_listener = .{
+    .format = shm_format_handler,
 };
 
 pub fn main() !void {
