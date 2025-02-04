@@ -1,8 +1,12 @@
 const std = @import("std");
+const io = @import("io_util.zig");
 const posix = std.posix;
 const os = std.os;
 const cstd = @cImport({
     @cInclude("stdlib.h");
+});
+const wl = @cImport({
+    @cInclude("wayland-client.h");
 });
 
 const ShmError = error{
@@ -13,6 +17,10 @@ const ShmError = error{
 };
 
 const CreateAnonymousFileError = std.fmt.BufPrintError || posix.TruncateError || ShmError;
+const CreateBufferError = CreateAnonymousFileError || posix.MMapError;
+
+var shm: ?*wl.wl_shm = null;
+var shm_data: ?*anyopaque = null;
 
 fn set_cloexec_or_close(fd: usize) ShmError!usize {
     if (fd == -1) {
@@ -59,4 +67,24 @@ fn os_create_anonymous_file(size: u64) CreateAnonymousFileError!usize {
     }
 
     return fd;
+}
+
+pub fn create_buffer(width: usize, height: usize) ShmError!wl.wl_buffer {
+    const stride = width * 4;
+    const size = stride * height;
+
+    const fd = try os_create_anonymous_file(size);
+    const sharedmap: std.os.linux.MAP = .{ .TYPE = std.os.linux.MAP_TYPE.SHARED };
+
+    shm_data = posix.mmap(null, size, posix.PROT.READ | posix.PROT.WRITE, sharedmap, fd, 0) catch |err| {
+        io.print("Failed to mmap\n", .{});
+        posix.close(fd);
+        return err;
+    };
+
+    const pool: *wl.wl_shm_pool = wl.wl_shm_create_pool(shm, fd, size);
+    const buff: *wl.wl_buffer = wl.wl_shm_pool_create_buffer(pool, 0, width, height, stride, wl.WL_SHM_FORMAT_ARGB8888);
+    wl.wl_shm_pool_destroy(pool);
+
+    return buff;
 }
