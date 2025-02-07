@@ -28,8 +28,8 @@ fn global_registry_handler(_: ?*anyopaque, _: ?*wl.struct_wl_registry, id: u32, 
         const xdg_base_opq: ?*anyopaque = xdg_shell.wl_registry_bind(@ptrCast(registry), id, &xdg_shell.xdg_wm_base_interface, 1);
         xdg.xdg_wm_base = @ptrCast(xdg_base_opq);
     } else if (std.mem.eql(u8, intZ, "wl_shm")) {
-        shm.shm = wl.wl_registry_bind(registry, id, &wl.wl_shm_interface, 1);
-        wl.wl_shm_add_listener(shm.shm, &wl.wl_shm_listener, null);
+        shm.shm = @ptrCast(wl.wl_registry_bind(registry, id, &wl.wl_shm_interface, 1));
+        _ = wl.wl_shm_add_listener(shm.shm, @ptrCast(@alignCast(&wl.wl_shm_listener)), null);
     }
 }
 
@@ -64,7 +64,7 @@ pub fn main() !void {
         return error.DispatchFailed;
     }
 
-    const roundtrip_result = wl.wl_display_roundtrip(display);
+    var roundtrip_result = wl.wl_display_roundtrip(display);
     if (roundtrip_result == -1) {
         return error.RoundtripFailed;
     }
@@ -98,6 +98,20 @@ pub fn main() !void {
     }
 
     wl.wl_surface_commit(surface);
+    roundtrip_result = wl.wl_display_roundtrip(display);
+    if (roundtrip_result == -1) {
+        return error.RoundtripFailed;
+    }
+    buffer = try shm.create_buffer(480, 360);
+
+    wl.wl_surface_attach(surface, buffer, 0, 0);
+    wl.wl_surface_commit(surface);
+
+    var pixel: [*]u32 = @ptrCast(@alignCast(shm.shm_data));
+    const pxlct = 480 * 360;
+    while (pixel < @as(u32, pxlct)) : (pixel += 1) {
+        pixel.* = 0xde000000;
+    }
 
     while (true) {}
 }
