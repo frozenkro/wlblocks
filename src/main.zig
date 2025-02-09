@@ -107,10 +107,11 @@ pub fn main() !void {
     wl.wl_surface_attach(surface, buffer, 0, 0);
     wl.wl_surface_commit(surface);
 
-    var pixel: [*]u32 = @ptrCast(@alignCast(shm.shm_data));
+    var data: [*]u32 = @ptrCast(@alignCast(shm.shm_data));
     const pxlct = 480 * 360;
-    while (pixel < @as(u32, pxlct)) : (pixel += 1) {
-        pixel.* = 0xde000000;
+    var i: u32 = 0;
+    while (i < pxlct) : (i += 1) {
+        data[i] = 0xde000000;
     }
 
     while (true) {}

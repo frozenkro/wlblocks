@@ -36,23 +36,19 @@ fn set_cloexec_or_close(fd: usize) ShmError!usize {
     return fd;
 }
 
-fn create_tmpfile_cloexec(tmpname: *u8) !usize {
+fn create_tmpfile_cloexec(tmpname: *u8) !i32 {
     const fd_c: c_int = cstd.mkstemp(tmpname);
-    var fd: usize = @intCast(fd_c);
+    var fd: i32 = @intCast(fd_c);
     if (fd >= 0) {
         fd = set_cloexec_or_close(fd);
         posix.unlink(tmpname);
     }
 }
 
-fn os_create_anonymous_file(size: u64) CreateAnonymousFileError!usize {
+fn os_create_anonymous_file(size: u64) CreateAnonymousFileError!i32 {
     const template = "/wlblocks-shared-XXXXXX";
 
-    const path = posix.getenv("XDG_RUNTIME_DIR");
-    if (path == null) {
-        return ShmError.Enoent;
-    }
-
+    const path = try get_runtime_dir();
     const buf: [path.len + template.len]u8 = undefined;
     const name = try std.fmt.bufPrint(&buf, "{s}{s}", .{ path, template });
 
@@ -69,6 +65,13 @@ fn os_create_anonymous_file(size: u64) CreateAnonymousFileError!usize {
     return fd;
 }
 
+fn get_runtime_dir() ShmError![]u8 {
+    const path: []u8 = posix.getenv("XDG_RUNTIME_DIR") orelse {
+        return ShmError.Enoent;
+    };
+    return path;
+}
+
 pub fn create_buffer(width: usize, height: usize) CreateBufferError!*wl.wl_buffer {
     const stride = width * 4;
     const size = stride * height;
@@ -83,7 +86,7 @@ pub fn create_buffer(width: usize, height: usize) CreateBufferError!*wl.wl_buffe
     };
     shm_data = @ptrCast(mmap_result);
 
-    const pool: *wl.wl_shm_pool = wl.wl_shm_create_pool(shm, fd, size);
+    const pool: *wl.wl_shm_pool = wl.wl_shm_create_pool(shm, fd, @intCast(size));
     const buff: *wl.wl_buffer = wl.wl_shm_pool_create_buffer(pool, 0, width, height, stride, wl.WL_SHM_FORMAT_ARGB8888);
     wl.wl_shm_pool_destroy(pool);
 
