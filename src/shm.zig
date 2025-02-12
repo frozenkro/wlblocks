@@ -12,40 +12,44 @@ const wl = @cImport({
 const ShmError = error{
     Enoent,
     NoFd,
-    NoFlags,
-    FileSizeError,
+    NoBufCreated,
 };
 
-const CreateAnonymousFileError = std.fmt.BufPrintError || posix.TruncateError || ShmError;
+const SetCloexecOrCloseError = ShmError || posix.FcntlError;
+const CreateTmpFileError = SetCloexecOrCloseError || posix.UnlinkError;
+const CreateAnonymousFileError = std.fmt.BufPrintError || posix.TruncateError || CreateTmpFileError;
 const CreateBufferError = CreateAnonymousFileError || posix.MMapError;
+
+const fd_t = posix.fd_t;
 
 pub var shm: ?*wl.wl_shm = null;
 pub var shm_data: ?*anyopaque = null;
 
-fn set_cloexec_or_close(fd: usize) ShmError!usize {
+fn set_cloexec_or_close(fd: fd_t) SetCloexecOrCloseError!fd_t {
     if (fd == -1) {
         return ShmError.NoFd;
     }
 
-    const flags = posix.fcntl(fd, posix.F.GETFD, 0);
-    if (flags == -1 || (posix.fcntl(fd, posix.F.SETFD, flags | posix.FD_CLOEXEC) == -1)) {
+    const flags = try posix.fcntl(fd, posix.F.GETFD, 0);
+    _ = posix.fcntl(fd, posix.F.SETFD, flags | posix.FD_CLOEXEC) catch |err| {
         posix.close(fd);
-        return ShmError.NoFlags;
-    }
+        return err;
+    };
 
     return fd;
 }
 
-fn create_tmpfile_cloexec(tmpname: *[]u8) !i32 {
+fn create_tmpfile_cloexec(tmpname: *[]const u8) CreateTmpFileError!fd_t {
     const fd_c: c_int = cstd.mkstemp(@ptrCast(tmpname));
-    var fd: i32 = @intCast(fd_c);
+    var fd: fd_t = @intCast(fd_c);
     if (fd >= 0) {
-        fd = set_cloexec_or_close(fd);
-        posix.unlink(tmpname);
+        fd = try set_cloexec_or_close(fd);
+        try posix.unlink(tmpname.*);
     }
+    return fd;
 }
 
-fn os_create_anonymous_file(size: u64) CreateAnonymousFileError!i32 {
+fn os_create_anonymous_file(size: usize) CreateAnonymousFileError!fd_t {
     const template = "/wlblocks-shared-XXXXXX";
 
     var path_buf: [std.fs.max_path_bytes]u8 = undefined;
@@ -57,10 +61,10 @@ fn os_create_anonymous_file(size: u64) CreateAnonymousFileError!i32 {
         return ShmError.NoFd;
     }
 
-    if (try posix.ftruncate(@intCast(fd), size) < 0) {
+    posix.ftruncate(fd, size) catch |err| {
         posix.close(fd);
-        return ShmError.FileSizeError;
-    }
+        return err;
+    };
 
     return fd;
 }
@@ -91,7 +95,7 @@ pub fn create_buffer(width: i32, height: i32) CreateBufferError!*wl.wl_buffer {
     wl.wl_shm_pool_destroy(pool);
 
     if (buff == null) {
-        return ShmError.Enoent;
+        return ShmError.NoBufCreated;
     } else {
         return buff.?;
     }
