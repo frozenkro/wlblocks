@@ -11,12 +11,12 @@ const wl = @cImport({
 
 const ShmError = error{
     Enoent,
-    NoFd,
+    MksTempFailure,
     NoBufCreated,
 };
 
-const SetCloexecOrCloseError = ShmError || posix.FcntlError;
-const CreateTmpFileError = SetCloexecOrCloseError || posix.UnlinkError;
+const SetCloexecOrCloseError = posix.FcntlError;
+const CreateTmpFileError = ShmError || SetCloexecOrCloseError || posix.UnlinkError;
 const CreateAnonymousFileError = std.fmt.BufPrintError || posix.TruncateError || CreateTmpFileError;
 const CreateBufferError = CreateAnonymousFileError || posix.MMapError;
 
@@ -26,10 +26,6 @@ pub var shm: ?*wl.wl_shm = null;
 pub var shm_data: ?*anyopaque = null;
 
 fn set_cloexec_or_close(fd: fd_t) SetCloexecOrCloseError!fd_t {
-    if (fd == -1) {
-        return ShmError.NoFd;
-    }
-
     const flags = try posix.fcntl(fd, posix.F.GETFD, 0);
     _ = posix.fcntl(fd, posix.F.SETFD, flags | posix.FD_CLOEXEC) catch |err| {
         posix.close(fd);
@@ -39,13 +35,18 @@ fn set_cloexec_or_close(fd: fd_t) SetCloexecOrCloseError!fd_t {
     return fd;
 }
 
-fn create_tmpfile_cloexec(tmpname: *[]const u8) CreateTmpFileError!fd_t {
-    const fd_c: c_int = cstd.mkstemp(@ptrCast(tmpname));
-    var fd: fd_t = @intCast(fd_c);
-    if (fd >= 0) {
-        fd = try set_cloexec_or_close(fd);
-        try posix.unlink(tmpname.*);
+fn create_tmpfile_cloexec(tmpname: *[:0]u8) CreateTmpFileError!fd_t {
+    const fd_c: c_int = cstd.mkstemp(@ptrCast(tmpname.*));
+    if (fd_c == -1) {
+        const err: posix.E = @enumFromInt(std.c._errno().*);
+        io.print("ERRNO: {s}\n", .{@tagName(err)});
+        return ShmError.MksTempFailure;
     }
+
+    var fd: fd_t = @intCast(fd_c);
+    fd = try set_cloexec_or_close(fd);
+    try posix.unlink(tmpname.*);
+
     return fd;
 }
 
@@ -54,12 +55,9 @@ fn os_create_anonymous_file(size: usize) CreateAnonymousFileError!fd_t {
 
     var path_buf: [std.fs.max_path_bytes]u8 = undefined;
     const xdg_runtime_dir = try get_runtime_dir();
-    var name = try std.fmt.bufPrint(&path_buf, "{s}{s}", .{ xdg_runtime_dir, template });
+    var name = try std.fmt.bufPrintZ(&path_buf, "{s}{s}", .{ xdg_runtime_dir, template });
 
     const fd = try create_tmpfile_cloexec(&name);
-    if (fd == -1) {
-        return ShmError.NoFd;
-    }
 
     posix.ftruncate(fd, size) catch |err| {
         posix.close(fd);

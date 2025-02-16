@@ -11,6 +11,10 @@ pub var xdg_wm_base: ?*xdg_shell.xdg_wm_base = null; // base of xdg shell protoc
 pub var xdg_surface: ?*xdg_shell.xdg_surface = null; // based on wl_surface
 pub var xdg_toplevel: ?*xdg_shell.xdg_toplevel = null; // an xdg surface role
 
+pub var width: i32 = 460;
+pub var height: i32 = 380;
+pub var resized: bool = false;
+
 fn xdg_wm_base_ping_handler(_: ?*anyopaque, wm_base: ?*xdg_shell.xdg_wm_base, serial: u32) callconv(.C) void {
     xdg_shell.xdg_wm_base_pong(wm_base, serial);
 }
@@ -23,12 +27,15 @@ fn xdg_surface_configure_handler(_: ?*anyopaque, xs: ?*xdg_shell.xdg_surface, se
 
 pub const xdg_surface_listener: xdg_shell.xdg_surface_listener = .{ .configure = xdg_surface_configure_handler };
 
-fn xdg_toplevel_configure_handler(_: ?*anyopaque, _: ?*xdg_shell.xdg_toplevel, width: i32, height: i32, _: [*c]xdg_shell.wl_array) callconv(.C) void {
-    io.print("xdg toplevel configure: {d}x{d}\n", .{ width, height });
+fn xdg_toplevel_configure_handler(_: ?*anyopaque, _: ?*xdg_shell.xdg_toplevel, new_width: i32, new_height: i32, _: [*c]xdg_shell.wl_array) callconv(.C) void {
+    io.print("xdg toplevel configure: {d}x{d}\n", .{ new_width, new_height });
+    width = new_width;
+    height = new_height;
+    resized = true;
 }
 
 fn xdg_toplevel_close_handler(_: ?*anyopaque, _: ?*xdg_shell.xdg_toplevel) callconv(.C) void {
-    io.print("closing xdg toplevel", .{});
+    io.print("closing xdg toplevel\n", .{});
 }
 
 pub const xdg_toplevel_listener: xdg_shell.xdg_toplevel_listener = .{
