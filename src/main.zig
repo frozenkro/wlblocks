@@ -9,6 +9,9 @@ const xdg_shell = @cImport({
     @cInclude("xdg-shell.h");
 });
 
+const COLOR_BLUE: u32 = 0xde0000ff;
+const COLOR_BLACK: u32 = 0xde000000;
+const ColorSwapError = error{UnsupportedColor};
 const AddListenerError = error{AddListenerFailed};
 
 var display: ?*wl.struct_wl_display = null;
@@ -85,13 +88,52 @@ fn add_listeners() AddListenerError!void {
     }
 }
 
-fn draw(color: u32) void {
+fn swapColor(color: u32) ColorSwapError!u32 {
+    if (color == COLOR_BLUE) {
+        return COLOR_BLACK;
+    } else if (color == COLOR_BLACK) {
+        return COLOR_BLUE;
+    }
+    return error.UnsupportedColor;
+}
+
+fn draw_solid() void {
     var data: [*]u32 = @ptrCast(@alignCast(shm.shm_data));
-    const pxlct = xdg.width * xdg.height;
+
     var i: u32 = 0;
-    while (i < pxlct) : (i += 1) {
-        //data[i] = 0xde000000;
-        data[i] = color;
+    var y: u32 = 0;
+    while (y < xdg.height) : (y += 1) {
+        var x: u32 = 0;
+        while (x < xdg.width) : (x += 1) {
+            data[i] = COLOR_BLUE;
+            i += 1;
+        }
+    }
+}
+
+fn draw_grid() ColorSwapError!void {
+    var data: [*]u32 = @ptrCast(@alignCast(shm.shm_data));
+
+    var row_start_color: u32 = COLOR_BLACK;
+    var color: u32 = row_start_color;
+
+    var i: u32 = 0;
+    var y: u32 = 0;
+    while (y < xdg.height) : (y += 1) {
+        if (y % 10 == 0) {
+            row_start_color = try swapColor(row_start_color);
+        }
+        color = row_start_color;
+
+        var x: u32 = 0;
+        while (x < xdg.width) : (x += 1) {
+            //data[i] = 0xde000000;
+            if (x % 10 == 0) {
+                color = try swapColor(color);
+            }
+            data[i] = color;
+            i += 1;
+        }
     }
 }
 
@@ -137,8 +179,8 @@ pub fn main() !void {
     wl.wl_surface_attach(surface, buffer, 0, 0);
     wl.wl_surface_commit(surface);
 
-    const color = 0xde0000ff;
-    draw(color);
+    try draw_grid();
+    //draw_solid();
 
     while (wl.wl_display_dispatch(display) >= 0) {
         if (xdg.resized) {
