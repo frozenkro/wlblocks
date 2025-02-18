@@ -15,6 +15,13 @@ pub fn build(b: *std.Build) void {
     // set a preferred release mode, allowing the user to decide how to optimize.
     const optimize = b.standardOptimizeOption(.{});
 
+    const opts = .{ .target = target, .optimize = optimize };
+    const dep = b.dependency("giza", opts);
+
+    const cairo_module = dep.module("cairo");
+    const pango_module = dep.module("pango");
+    const pangocairo_module = dep.module("pangocairo");
+
     const lib = b.addStaticLibrary(.{
         .name = "wlblocks",
         // In this case the main source file is merely a path, however, in more
@@ -41,6 +48,10 @@ pub fn build(b: *std.Build) void {
     exe.linkSystemLibrary("wayland-client");
     exe.linkLibC();
     exe.addCSourceFile(.{ .file = .{ .cwd_relative = "src/c/xdg-shell.c" } });
+
+    exe.root_module.addImport("cairo", cairo_module);
+    exe.root_module.addImport("pango", pango_module);
+    exe.root_module.addImport("pangocairo", pangocairo_module);
 
     // This declares intent for the executable to be installed into the
     // standard location when the user invokes the "install" step (the default

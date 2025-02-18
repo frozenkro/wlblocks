@@ -51,6 +51,7 @@
         //    // actually used.
         //    .lazy = false,
         //},
+        .giza = .{ .url = "https://github.com/frozenkro/giza/archive/refs/tags/v0.1.1.tar.gz", .hash = "122057550f6c02fb189e015239629e4dc88d3218eb7156ae94be32ef2b74d1efb9d5" },
     },
 
     // Specifies the set of files and directories that are included in this package.
