@@ -8,6 +8,7 @@ const cstd = @cImport({
 const wl = @cImport({
     @cInclude("wayland-client.h");
 });
+const xdg = @import("xdg.zig");
 
 const ShmError = error{
     Enoent,
@@ -22,8 +23,8 @@ const CreateBufferError = CreateAnonymousFileError || posix.MMapError;
 
 const fd_t = posix.fd_t;
 
-pub var shm: ?*wl.wl_shm = null;
-pub var shm_data: ?*anyopaque = null;
+pub var shm: *wl.wl_shm = undefined;
+pub var shm_data: [*]u32 = undefined;
 
 fn set_cloexec_or_close(fd: fd_t) SetCloexecOrCloseError!fd_t {
     const flags = try posix.fcntl(fd, posix.F.GETFD, 0);
@@ -97,4 +98,40 @@ pub fn create_buffer(width: i32, height: i32) CreateBufferError!*wl.wl_buffer {
     } else {
         return buff.?;
     }
+}
+
+pub fn draw(grid: [][]u32) void {
+    const height = grid.len;
+    if (height == 0) {
+        return;
+    }
+    const width = grid[0].len;
+
+    const shm_x_min = getHrizOffset(width);
+    const shm_y_min = getVertOffset(height);
+    var pixel = shm_x_min * shm_y_min;
+    var grid_y: u32 = 0;
+    while (grid_y < height) : (grid_y += 1) {
+        var grid_x: u32 = 0;
+        while (grid_x < width) : (grid_x += 1) {
+            shm_data[pixel] = grid[grid_y][grid_x];
+            pixel += 1;
+        }
+        pixel += shm_x_min * 2;
+    }
+}
+
+fn getVertOffset(height: u32) u32 {
+    if (xdg.height <= height) {
+        return 0;
+    }
+    const margin = xdg.height - height;
+    return @divTrunc(margin, 2);
+}
+fn getHrizOffset(width: u32) u32 {
+    if (xdg.width <= width) {
+        return 0;
+    }
+    const margin = xdg.width - width;
+    return @divTrunc(margin, 2);
 }

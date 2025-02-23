@@ -8,6 +8,7 @@ const wl = @cImport({
 const xdg_shell = @cImport({
     @cInclude("xdg-shell.h");
 });
+const cairo = @import("cairo.zig");
 
 const COLOR_BLUE: u32 = 0xde0000ff;
 const COLOR_BLACK: u32 = 0xde000000;
@@ -112,8 +113,6 @@ fn draw_solid() void {
 }
 
 fn draw_grid() ColorSwapError!void {
-    var data: [*]u32 = @ptrCast(@alignCast(shm.shm_data));
-
     var row_start_color: u32 = COLOR_BLACK;
     var color: u32 = row_start_color;
 
@@ -131,7 +130,7 @@ fn draw_grid() ColorSwapError!void {
             if (x % 10 == 0) {
                 color = try swapColor(color);
             }
-            data[i] = color;
+            shm.shm_data[i] = color;
             i += 1;
         }
     }
@@ -179,8 +178,9 @@ pub fn main() !void {
     wl.wl_surface_attach(surface, buffer, 0, 0);
     wl.wl_surface_commit(surface);
 
-    try draw_grid();
+    //try draw_grid();
     //draw_solid();
+    try cairo.drawPng();
 
     while (wl.wl_display_dispatch(display) >= 0) {
         if (xdg.resized) {
