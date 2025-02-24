@@ -75,7 +75,7 @@ fn get_runtime_dir() ShmError![:0]const u8 {
     return path;
 }
 
-pub fn create_buffer(width: i32, height: i32) CreateBufferError!*wl.wl_buffer {
+pub fn create_buffer(width: u32, height: u32) CreateBufferError!*wl.wl_buffer {
     const stride = width * 4;
     const size = stride * height;
 
@@ -90,7 +90,7 @@ pub fn create_buffer(width: i32, height: i32) CreateBufferError!*wl.wl_buffer {
     shm_data = @ptrCast(mmap_result);
 
     const pool: ?*wl.wl_shm_pool = wl.wl_shm_create_pool(shm, fd, @intCast(size));
-    const buff: ?*wl.wl_buffer = wl.wl_shm_pool_create_buffer(pool, 0, width, height, stride, wl.WL_SHM_FORMAT_ARGB8888);
+    const buff: ?*wl.wl_buffer = wl.wl_shm_pool_create_buffer(pool, 0, @intCast(width), @intCast(height), @intCast(stride), wl.WL_SHM_FORMAT_ARGB8888);
     wl.wl_shm_pool_destroy(pool);
 
     if (buff == null) {
@@ -101,11 +101,11 @@ pub fn create_buffer(width: i32, height: i32) CreateBufferError!*wl.wl_buffer {
 }
 
 pub fn draw(grid: [][]u32) void {
-    const height = grid.len;
+    const height: u32 = @intCast(grid.len);
     if (height == 0) {
         return;
     }
-    const width = grid[0].len;
+    const width: u32 = @intCast(grid[0].len);
 
     const shm_x_min = getHrizOffset(width);
     const shm_y_min = getVertOffset(height);

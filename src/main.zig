@@ -180,7 +180,13 @@ pub fn main() !void {
 
     //try draw_grid();
     //draw_solid();
-    try cairo.drawPng();
+    //try cairo.drawPng();
+    var cat_gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    const cat_alloc = cat_gpa.allocator();
+    defer _ = cat_gpa.deinit();
+    const cat_map = try cairo.createPngMap("nyan-cat.png", cat_alloc);
+    defer cat_alloc.free(cat_map);
+    shm.draw(cat_map);
 
     while (wl.wl_display_dispatch(display) >= 0) {
         if (xdg.resized) {
@@ -191,6 +197,4 @@ pub fn main() !void {
             // draw(color);
         }
     }
-
-    io.print("executing deferred functions", .{});
 }
