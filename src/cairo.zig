@@ -5,9 +5,10 @@ const cairo = @cImport({
 const io = @import("io_util.zig");
 const shm = @import("shm.zig");
 const xdg = @import("xdg.zig");
+const PixelMatrix = @import("PixelMatrix.zig").PixelMatrix;
 
 const CairoError = error{SurfaceStatusError};
-const CreatePngMapError = CairoError || std.mem.Allocator.Error;
+const CreatePngMatrixError = CairoError || std.mem.Allocator.Error;
 
 pub fn drawPng() !void {
     const surface = cairo.cairo_image_surface_create_from_png("nyan-cat.png");
@@ -34,7 +35,7 @@ pub fn drawPng() !void {
     }
 }
 
-pub fn createPngMap(file_name: []const u8, allocator: std.mem.Allocator) CreatePngMapError![][]u32 {
+pub fn createPngMatrix(file_name: []const u8, allocator: std.mem.Allocator) CreatePngMatrixError!PixelMatrix {
     const surface = cairo.cairo_image_surface_create_from_png(@ptrCast(file_name));
     const status = cairo.cairo_surface_status(surface);
     if (status != cairo.CAIRO_STATUS_SUCCESS) {
@@ -47,16 +48,7 @@ pub fn createPngMap(file_name: []const u8, allocator: std.mem.Allocator) CreateP
     const img_width: u32 = @intCast(cairo.cairo_image_surface_get_width(surface));
     const img_height: u32 = @intCast(cairo.cairo_image_surface_get_height(surface));
 
-    const map = try allocator.alloc([img_width]u32, img_height);
+    const mtx = try PixelMatrix.init(allocator, img_width, img_height, img_data);
 
-    var y: u32 = 0;
-    var i: u32 = 0;
-    while (y < map.len) : (y += 1) {
-        var x: u32 = 0;
-        while (x < map[y].len) : (x += 1) {
-            map[y][x] = img_data[i];
-            i += 1;
-        }
-    }
-    return map;
+    return mtx;
 }
