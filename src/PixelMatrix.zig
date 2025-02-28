@@ -1,31 +1,28 @@
 const std = @import("std");
 const Error = std.mem.Allocator.Error;
 
-const PixelMatrixError = error{DataSizeMismatch};
+pub const PixelMatrixError = error{DataSizeMismatch} || std.mem.Allocator.Error;
 
-const PixelMatrix = struct {
+pub const PixelMatrix = struct {
     width: usize,
     height: usize,
     buffer: []u32,
     rows: [][]u32,
     allocator: std.mem.Allocator,
 
-    pub fn init(allocator: std.mem.Allocator, width: usize, height: usize, data: ?[*]u32) Error!PixelMatrix {
-        if (data != null and data.len != width * height) {
+    pub fn init(allocator: std.mem.Allocator, width: usize, height: usize, data: ?[]u32) PixelMatrixError!PixelMatrix {
+        if (data != null and data.?.len != height * width) {
             return PixelMatrixError.DataSizeMismatch;
         }
 
-        const buffer = try allocator.alloc(u32, width * height);
+        const buffer = try allocator.alloc(u32, height * width);
         const rows = try allocator.alloc([]u32, height);
 
-        var i: usize = 0;
         if (data != null) {
-            while (i < data.len) : (i += 1) {
-                buffer[i] = data[i];
-            }
+            @memcpy(buffer, data.?);
         }
 
-        i = 0;
+        var i: usize = 0;
         while (i < height) : (i += 1) {
             rows[i] = buffer[i * width .. (i + 1) * width];
         }

@@ -184,8 +184,8 @@ pub fn main() !void {
     var cat_gpa = std.heap.GeneralPurposeAllocator(.{}){};
     const cat_alloc = cat_gpa.allocator();
     defer _ = cat_gpa.deinit();
-    const cat_map = try cairo.createPngMatrix("nyan-cat.png", cat_alloc);
-    defer cat_alloc.free(cat_map);
+    var cat_map = try cairo.createPngMatrix("nyan-cat.png", cat_alloc);
+    defer cat_map.deinit();
     shm.draw(cat_map);
 
     while (wl.wl_display_dispatch(display) >= 0) {
