@@ -2,10 +2,10 @@ const std = @import("std");
 const cairo = @cImport({
     @cInclude("cairo.h");
 });
-const io = @import("io_util.zig");
-const shm = @import("shm.zig");
-const xdg = @import("xdg.zig");
-const pm = @import("PixelMatrix.zig");
+const io = @import("../io_util.zig");
+const shm = @import("../wayland/shm.zig");
+const xdg = @import("../wayland/xdg.zig");
+const pm = @import("pixel_matrix.zig");
 const PixelMatrix = pm.PixelMatrix;
 const PixelMatrixError = pm.PixelMatrixError;
 

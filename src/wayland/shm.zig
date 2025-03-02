@@ -1,5 +1,5 @@
 const std = @import("std");
-const io = @import("io_util.zig");
+const io = @import("../io_util.zig");
 const posix = std.posix;
 const os = std.os;
 const cstd = @cImport({
@@ -9,7 +9,7 @@ const wl = @cImport({
     @cInclude("wayland-client.h");
 });
 const xdg = @import("xdg.zig");
-const PixelMatrix = @import("PixelMatrix.zig").PixelMatrix;
+const PixelMatrix = @import("../mtx/pixel_matrix.zig").PixelMatrix;
 
 const ShmError = error{
     Enoent,
@@ -102,30 +102,35 @@ pub fn create_buffer(width: u32, height: u32) CreateBufferError!*wl.wl_buffer {
 }
 
 pub fn draw(mtx: PixelMatrix) void {
-    const shm_x_min = getHrizOffset(mtx.width);
-    const shm_y_min = getVertOffset(mtx.height);
-    var pixel = (shm_y_min * xdg.width) + shm_x_min;
+    const x_off = getHrizOffset(mtx.width);
+    const y_off = getVertOffset(mtx.height);
+    var pixel = (y_off.pre * xdg.width) + x_off.pre;
 
     for (mtx.rows) |row| {
         for (row) |val| {
             shm_data[pixel] = val;
             pixel += 1;
         }
-        pixel += shm_x_min * 2 + 1;
+        pixel += x_off.pre + x_off.post;
     }
 }
 
-fn getVertOffset(height: usize) usize {
+const Offset = struct { pre: usize, post: usize };
+fn getVertOffset(height: usize) Offset {
     if (xdg.height <= height) {
-        return 0;
+        return Offset{ .pre = 0, .post = 0 };
     }
     const margin = xdg.height - height;
-    return @divTrunc(margin, 2);
+    const pre = @divTrunc(margin, 2);
+    const post = if (margin % 2 == 0) pre else pre + 1;
+    return Offset{ .pre = pre, .post = post };
 }
-fn getHrizOffset(width: usize) usize {
+fn getHrizOffset(width: usize) Offset {
     if (xdg.width <= width) {
-        return 0;
+        return Offset{ .pre = 0, .post = 0 };
     }
     const margin = xdg.width - width;
-    return @divTrunc(margin, 2);
+    const pre = @divTrunc(margin, 2);
+    const post = if (margin % 2 == 0) pre else pre + 1;
+    return Offset{ .pre = pre, .post = post };
 }

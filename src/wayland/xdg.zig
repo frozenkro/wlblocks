@@ -1,5 +1,5 @@
 const std = @import("std");
-const io = @import("io_util.zig");
+const io = @import("../io_util.zig");
 const wl = @cImport({
     @cInclude("wayland-client.h");
 });
