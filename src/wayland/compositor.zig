@@ -20,7 +20,7 @@ pub const WlCompositor = struct {
             .ptr = self,
             .bindFn = bind,
             .interface_name = "wl_compositor",
-            .interface = &wl.wl_compositor_interface,
+            .interface = wl.wl_compositor_interface,
             .version = 4,
         };
     }

@@ -23,7 +23,7 @@ const ShmError = error{
     NoBufCreated,
     CloexecFailed,
     UnlinkFailed,
-    ShmNotInitialized,
+    ShmNotBound,
 };
 
 pub const WlShm = struct {
@@ -49,7 +49,7 @@ pub const WlShm = struct {
             .ptr = self,
             .bindFn = bind,
             .interface_name = "wl_shm",
-            .interface = &wl.wl_shm_interface,
+            .interface = wl.wl_shm_interface,
             .version = 1,
         };
     }

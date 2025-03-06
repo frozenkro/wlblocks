@@ -29,6 +29,7 @@ pub const WlClient = struct {
     compositor: *comp.WlCompositor,
     shm: *shm.WlShm,
     window: *win.WlWindow,
+    surface: *wl.wl_surface,
 
     fn shmFormatHandler(_: ?*anyopaque, _: ?*wl.wl_shm, format: u32) callconv(.C) void {
         io.print("Format {d}\n", .{format});
@@ -40,59 +41,60 @@ pub const WlClient = struct {
 
     pub fn init() !WlClient {
         const display = try disp.WlDisplay.init();
-        const registry = try reg.WlRegistry.init(display);
+        var registry = try reg.WlRegistry.init(display);
 
-        const compositor = comp.WlCompositor.init();
-        const window = win.WlWindow.init();
-        const wlShm = shm.WlShm.init();
+        var compositor = comp.WlCompositor.init();
+        var window = win.WlWindow.init();
+        var wlShm = shm.WlShm.init();
 
         const bindings = [_]b.Binder{
             compositor.binder(),
             window.binder(),
             wlShm.binder(),
         };
-        registry.register(bindings);
+        registry.register(&bindings);
 
-        const add_listener_result = wl.wl_registry_add_listener(registry, &reg.WlRegistry.registry_listener, null);
+        const add_listener_result = wl.wl_registry_add_listener(registry.registry, &reg.WlRegistry.registry_listener, null);
         if (add_listener_result != 0) {
             return WaylandClientSetupError.AddListenerFailed;
         }
 
-        const dispatch_result = wl.wl_display_dispatch(display);
+        const dispatch_result = wl.wl_display_dispatch(display.display);
         if (dispatch_result == -1) {
             return WaylandClientSetupError.DispatchFailed;
         }
 
-        var roundtrip_result = wl.wl_display_roundtrip(display);
+        var roundtrip_result = wl.wl_display_roundtrip(display.display);
         if (roundtrip_result == -1) {
             return WaylandClientSetupError.RoundtripFailed;
         }
 
-        if (compositor == null) {
+        if (compositor.compositor == null) {
             return WaylandClientSetupError.CompositorConnectFailed;
         }
 
-        const surface = wl.wl_compositor_create_surface(compositor) orelse return error.SurfaceCreationFailed;
+        const surface = wl.wl_compositor_create_surface(compositor.compositor) orelse return error.SurfaceCreationFailed;
         io.print("Created a surface\n", .{});
 
-        try addListeners(surface, shm_listener);
+        try addListeners(surface, &wlShm, &shm_listener);
 
         wl.wl_surface_commit(surface);
-        roundtrip_result = wl.wl_display_roundtrip(display);
+        roundtrip_result = wl.wl_display_roundtrip(display.display);
         if (roundtrip_result == -1) {
             return error.RoundtripFailed;
         }
-        const buffer = try shm.create_buffer(xdg.width, xdg.height);
+        try wlShm.initBuffer(xdg.width, xdg.height);
 
-        wl.wl_surface_attach(surface, buffer, 0, 0);
+        wl.wl_surface_attach(surface, wlShm.buffer, 0, 0);
         wl.wl_surface_commit(surface);
 
         return WlClient{
-            .display = display,
-            .registry = registry,
-            .compositor = compositor,
+            .display = &display,
+            .registry = &registry,
+            .compositor = &compositor,
             .surface = surface,
-            .buffer = buffer,
+            .shm = &wlShm,
+            .window = &window,
         };
     }
 
@@ -107,7 +109,7 @@ pub const WlClient = struct {
         }
     }
 };
-fn addListeners(surface: *wl.struct_wl_surface, shm_listener: *wl.wl_shm_listener) AddListenerError!void {
+fn addListeners(surface: *wl.struct_wl_surface, wlShm: *shm.WlShm, shm_listener: [*c]const wl.wl_shm_listener) AddListenerError!void {
     var cIntRes: c_int = 0;
     // add listener to wm base
     cIntRes = xdg_shell.xdg_wm_base_add_listener(xdg.xdg_wm_base, &xdg.xdg_wm_base_listener, null);
@@ -129,7 +131,7 @@ fn addListeners(surface: *wl.struct_wl_surface, shm_listener: *wl.wl_shm_listene
         return error.AddListenerFailed;
     }
 
-    cIntRes = wl.wl_shm_add_listener(shm.shm, &shm_listener, null);
+    cIntRes = wl.wl_shm_add_listener(wlShm.shm, &shm_listener, null);
     if (cIntRes != 0) {
         return error.AddListenerFailed;
     }

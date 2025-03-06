@@ -2,6 +2,9 @@ const b = @import("binder.zig");
 const xdg_shell = @cImport({
     @cInclude("xdg-shell.h");
 });
+const wl = @cImport({
+    @cInclude("wayland-client.h");
+});
 
 pub const WlWindow = struct {
     base: ?*xdg_shell.xdg_wm_base,
@@ -34,7 +37,7 @@ pub const WlWindow = struct {
             .ptr = self,
             .bindFn = bind,
             .interface_name = "xdg_wm_base",
-            .interface = &xdg_shell.xdg_wm_base_interface,
+            .interface = @bitCast(xdg_shell.xdg_wm_base_interface),
             .version = 1,
         };
     }
