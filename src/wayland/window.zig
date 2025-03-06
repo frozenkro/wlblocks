@@ -12,6 +12,18 @@ pub const WlWindow = struct {
     resized: bool,
     unknownSize: bool,
 
+    pub fn init() WlWindow {
+        return WlWindow{
+            .base = null,
+            .surface = null,
+            .toplevel = null,
+            .width = 0,
+            .height = 0,
+            .resized = false,
+            .unknownSize = false,
+        };
+    }
+
     fn bind(ptr: *anyopaque, base_opq: *anyopaque) void {
         const self: *WlWindow = @ptrCast(@alignCast(ptr));
         self.base = @ptrCast(base_opq);

@@ -6,6 +6,10 @@ const wl = @cImport({
 pub const WlCompositor = struct {
     compositor: ?*wl.struct_wl_compositor,
 
+    pub fn init() WlCompositor {
+        return WlCompositor{ .compositor = null };
+    }
+
     fn bind(ptr: *anyopaque, compositor_opq: *anyopaque) void {
         const self: *WlCompositor = @ptrCast(@alignCast(ptr));
         self.compositor = @ptrCast(compositor_opq);

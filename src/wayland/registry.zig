@@ -13,14 +13,17 @@ pub const WlRegistry = struct {
     binders: ?[]b.Binder,
 
     var instance: ?*WlRegistry = null;
-    pub const registry_listener: wl.struct_wl_registry_listener = .{ .global = global_registry_handler, .global_remove = global_registry_remove_handler };
+    pub const registry_listener: wl.struct_wl_registry_listener = .{ .global = globalRegistryHandler, .global_remove = globalRegistryRemoveHandler };
 
     pub fn init(display: disp.WlDisplay) RegistryError!WlRegistry {
         const registry = wl.wl_display_get_registry(display.display) orelse {
             return RegistryError.GetRegistryFailed;
         };
 
-        var wl_registry = WlRegistry{ .registry = registry };
+        var wl_registry = WlRegistry{
+            .registry = registry,
+            .binders = null,
+        };
         WlRegistry.instance = &wl_registry;
         return wl_registry;
     }
@@ -29,7 +32,7 @@ pub const WlRegistry = struct {
         self.bindings = bindings;
     }
 
-    pub fn global_registry_handler(_: ?*anyopaque, _: ?*wl.struct_wl_registry, id: u32, interface: [*c]const u8, version: u32) callconv(.C) void {
+    pub fn globalRegistryHandler(_: ?*anyopaque, _: ?*wl.struct_wl_registry, id: u32, interface: [*c]const u8, version: u32) callconv(.C) void {
         const self = instance orelse {
             io.print("global registry handler called before initialization\n");
             return;
@@ -50,7 +53,8 @@ pub const WlRegistry = struct {
         }
     }
 
-    pub fn global_registry_remove_handler(_: ?*anyopaque, _: ?*wl.struct_wl_registry, id: u32) callconv(.C) void {
-        io.print("Received registry remove event for id: {d}", .{id});
+    pub fn globalRegistryRemoveHandler(_: ?*anyopaque, _: ?*wl.struct_wl_registry, id: u32) callconv(.C) void {
+        io.print("Received registry remove event for id: {d}\n", .{id});
+        io.print("should probably do something about that huh.\n", .{});
     }
 };

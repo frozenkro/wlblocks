@@ -1,5 +1,5 @@
 const std = @import("std");
-const wlclient = @import("wayland/client.zig");
+const wc = @import("wayland/client.zig");
 const shm = @import("wayland/shm.zig");
 const xdg = @import("wayland/xdg.zig");
 const cairo = @import("mtx/cairo.zig");
@@ -17,7 +17,7 @@ fn swapColor(color: u32) ColorSwapError!u32 {
     return error.UnsupportedColor;
 }
 
-fn draw_solid() void {
+fn drawSolid() void {
     var data: [*]u32 = @ptrCast(@alignCast(shm.shm_data));
 
     var i: u32 = 0;
@@ -31,7 +31,7 @@ fn draw_solid() void {
     }
 }
 
-fn draw_grid() ColorSwapError!void {
+fn drawGrid() ColorSwapError!void {
     var row_start_color: u32 = colors.COLOR_BLACK;
     var color: u32 = row_start_color;
 
@@ -56,11 +56,11 @@ fn draw_grid() ColorSwapError!void {
 }
 
 pub fn main() !void {
-    try wlclient.init();
+    const wlclient = try wc.WlClient.init();
     defer wlclient.deinit();
 
-    //try draw_grid();
-    //draw_solid();
+    //try drawGrid();
+    //drawSolid();
     //try cairo.drawPng();
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     const alloc = gpa.allocator();
