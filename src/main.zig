@@ -56,7 +56,7 @@ fn drawGrid() ColorSwapError!void {
 }
 
 pub fn main() !void {
-    const wlclient = try wc.WlClient.init();
+    var wlclient = try wc.WlClient.init();
     defer wlclient.deinit();
 
     //try drawGrid();
@@ -70,7 +70,10 @@ pub fn main() !void {
     // shm.draw(cat_map);
     var palette_map = try palette.createPaletteMtx(alloc);
     defer palette_map.deinit();
-    shm.draw(palette_map);
+    const data = wlclient.shm.shm_data orelse {
+        return error.ShmDataNotInitialized;
+    };
+    shm.draw(palette_map, data);
 
     while (true) {
         wlclient.clientLoop() catch {

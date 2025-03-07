@@ -10,6 +10,6 @@ pub const Binder = struct {
     version: u32,
 
     pub fn bind(self: Binder, binding: *anyopaque) void {
-        return self.bindFn(binding);
+        return self.bindFn(self.ptr, binding);
     }
 };

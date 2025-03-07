@@ -49,15 +49,15 @@ pub const WlShm = struct {
             .ptr = self,
             .bindFn = bind,
             .interface_name = "wl_shm",
-            .interface = wl.wl_shm_interface,
+            .interface = &wl.wl_shm_interface,
             .version = 1,
         };
     }
 
     pub fn initBuffer(self: *WlShm, width: u32, height: u32) CreateBufferError!void {
-        self.shm orelse {
+        if (self.shm == null) {
             return CreateBufferError.ShmNotBound;
-        };
+        }
 
         const stride = width * 4;
         const size = stride * height;
@@ -91,7 +91,11 @@ pub const WlShm = struct {
             wl.WL_SHM_FORMAT_ARGB8888,
         );
 
-        return buff orelse ShmError.NoBufCreated;
+        if (buff != null) {
+            self.buffer = buff;
+        } else {
+            return ShmError.NoBufCreated;
+        }
     }
 };
 
@@ -115,11 +119,11 @@ fn createTmpfileCloexec(tmpname: *[:0]u8) ShmError!fd_t {
 
     var fd: fd_t = @intCast(fd_c);
     fd = setCloexec(fd) catch |err| {
-        io.print("Error setting cloexec on fd: '{d}'\nError: {s}", .{ fd, err });
+        io.print("Error setting cloexec on fd: '{d}'\nError: {s}", .{ fd, @errorName(err) });
         return ShmError.CloexecFailed;
     };
     posix.unlink(tmpname.*) catch |err| {
-        io.print("Error unlinking tmp file name '{s}'\nError: {s}", .{ tmpname, err });
+        io.print("Error unlinking tmp file name '{s}'\nError: {s}", .{ tmpname, @errorName(err) });
         return ShmError.UnlinkFailed;
     };
 

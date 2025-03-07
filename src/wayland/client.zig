@@ -35,12 +35,12 @@ pub const WlClient = struct {
         io.print("Format {d}\n", .{format});
     }
 
-    const shm_listener: wl.wl_shm_listener = .{
+    var shm_listener: wl.wl_shm_listener = .{
         .format = shmFormatHandler,
     };
 
     pub fn init() !WlClient {
-        const display = try disp.WlDisplay.init();
+        var display = try disp.WlDisplay.init();
         var registry = try reg.WlRegistry.init(display);
 
         var compositor = comp.WlCompositor.init();
@@ -52,7 +52,7 @@ pub const WlClient = struct {
             window.binder(),
             wlShm.binder(),
         };
-        registry.register(&bindings);
+        registry.register(&bindings, 3);
 
         const add_listener_result = wl.wl_registry_add_listener(registry.registry, &reg.WlRegistry.registry_listener, null);
         if (add_listener_result != 0) {
@@ -100,16 +100,16 @@ pub const WlClient = struct {
 
     pub fn deinit(self: *WlClient) void {
         wl.wl_surface_destroy(self.surface);
-        wl.wl_display_disconnect(self.display);
+        wl.wl_display_disconnect(self.display.display);
     }
 
     pub fn clientLoop(self: *WlClient) !void {
-        if (wl.wl_display_dispatch(self.display) < 0) {
+        if (wl.wl_display_dispatch(self.display.display) < 0) {
             return WaylandClientLoopError.DispatchFailed;
         }
     }
 };
-fn addListeners(surface: *wl.struct_wl_surface, wlShm: *shm.WlShm, shm_listener: [*c]const wl.wl_shm_listener) AddListenerError!void {
+fn addListeners(surface: *wl.struct_wl_surface, wlShm: *shm.WlShm, shm_listener: *wl.wl_shm_listener) AddListenerError!void {
     var cIntRes: c_int = 0;
     // add listener to wm base
     cIntRes = xdg_shell.xdg_wm_base_add_listener(xdg.xdg_wm_base, &xdg.xdg_wm_base_listener, null);
@@ -131,7 +131,7 @@ fn addListeners(surface: *wl.struct_wl_surface, wlShm: *shm.WlShm, shm_listener:
         return error.AddListenerFailed;
     }
 
-    cIntRes = wl.wl_shm_add_listener(wlShm.shm, &shm_listener, null);
+    cIntRes = wl.wl_shm_add_listener(wlShm.shm, shm_listener, null);
     if (cIntRes != 0) {
         return error.AddListenerFailed;
     }

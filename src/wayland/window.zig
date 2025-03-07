@@ -37,7 +37,7 @@ pub const WlWindow = struct {
             .ptr = self,
             .bindFn = bind,
             .interface_name = "xdg_wm_base",
-            .interface = @bitCast(xdg_shell.xdg_wm_base_interface),
+            .interface = @ptrCast(&xdg_shell.xdg_wm_base_interface),
             .version = 1,
         };
     }
