@@ -56,15 +56,16 @@ fn drawGrid() ColorSwapError!void {
 }
 
 pub fn main() !void {
-    var wlclient = try wc.WlClient.init();
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    const alloc = gpa.allocator();
+    defer _ = gpa.deinit();
+
+    var wlclient = try wc.WlClient.init(&alloc);
     defer wlclient.deinit();
 
     //try drawGrid();
     //drawSolid();
     //try cairo.drawPng();
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    const alloc = gpa.allocator();
-    defer _ = gpa.deinit();
     // var cat_map = try cairo.createPngMatrix("nyan-cat.png", alloc);
     // defer cat_map.deinit();
     // shm.draw(cat_map);

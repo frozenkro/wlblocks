@@ -6,29 +6,42 @@ const wl = @cImport({
     @cInclude("wayland-client.h");
 });
 
-pub const RegistryError = error{GetRegistryFailed};
+pub const RegistryError = error{GetRegistryFailed} || std.mem.Allocator.Error;
 
 pub const WlRegistry = struct {
     registry: *wl.struct_wl_registry,
     binders: ?[*]const b.Binder = null,
-    binders_len: usize = 0,
+    binders_len: i32 = 0,
 
-    var instance: ?*WlRegistry = null;
+    pub var instance: ?*WlRegistry = null;
+
     pub const registry_listener: wl.struct_wl_registry_listener = .{ .global = globalRegistryHandler, .global_remove = globalRegistryRemoveHandler };
 
-    pub fn init(display: disp.WlDisplay) RegistryError!WlRegistry {
+    /// Returns nothing because this is a singleton.
+    /// Access instance at `WlRegistry.instance`.
+    pub fn init(allocator: std.mem.Allocator, display: disp.WlDisplay) RegistryError!void {
         const registry = wl.wl_display_get_registry(display.display) orelse {
             return RegistryError.GetRegistryFailed;
         };
 
-        var wl_registry = WlRegistry{
+        const wl_registry = try allocator.create(WlRegistry);
+        wl_registry.* = WlRegistry{
             .registry = registry,
         };
-        WlRegistry.instance = &wl_registry;
-        return wl_registry;
+        WlRegistry.instance = wl_registry;
     }
 
-    pub fn register(self: *WlRegistry, binders: [*]const b.Binder, binders_len: usize) void {
+    pub fn deinit(allocator: std.mem.Allocator) void {
+        if (WlRegistry.instance == null) {
+            io.print("Warning: Nothing to deinit\n", .{});
+            return;
+        }
+
+        allocator.destroy(WlRegistry.instance.?);
+        WlRegistry.instance = null;
+    }
+
+    pub fn register(self: *WlRegistry, binders: [*]const b.Binder, binders_len: i32) void {
         self.binders = binders;
         self.binders_len = binders_len;
     }

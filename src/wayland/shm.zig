@@ -26,6 +26,8 @@ const ShmError = error{
     ShmNotBound,
 };
 
+pub const AddListenerError = error{AddListenerFailed};
+
 pub const WlShm = struct {
     shm: ?*wl.wl_shm,
     shm_data: ?[*]u32,
@@ -52,6 +54,21 @@ pub const WlShm = struct {
             .interface = &wl.wl_shm_interface,
             .version = 1,
         };
+    }
+
+    fn shmFormatHandler(_: ?*anyopaque, _: ?*wl.wl_shm, format: u32) callconv(.C) void {
+        io.print("Format {d}\n", .{format});
+    }
+
+    const shm_listener: wl.wl_shm_listener = .{
+        .format = shmFormatHandler,
+    };
+
+    pub fn setupListeners(self: WlShm) AddListenerError!void {
+        const cIntRes = wl.wl_shm_add_listener(self.shm, &shm_listener, null);
+        if (cIntRes != 0) {
+            return error.AddListenerFailed;
+        }
     }
 
     pub fn initBuffer(self: *WlShm, width: u32, height: u32) CreateBufferError!void {
