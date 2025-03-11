@@ -1,4 +1,4 @@
-const b = @import("binder.zig");
+const b = @import("models/binder.zig");
 const wl = @cImport({
     @cInclude("wayland-client.h");
 });

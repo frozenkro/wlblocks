@@ -1,4 +1,4 @@
-const b = @import("binder.zig");
+const b = @import("models/binder.zig");
 const std = @import("std");
 const io = @import("../io_util.zig");
 const shm = @import("shm.zig");
@@ -6,6 +6,7 @@ const reg = @import("registry.zig");
 const comp = @import("compositor.zig");
 const win = @import("window.zig");
 const disp = @import("display.zig");
+const mx = @import("../mtx/pixel_matrix.zig");
 const wl = @cImport({
     @cInclude("wayland-client.h");
 });
@@ -22,6 +23,7 @@ const WaylandClientSetupError = error{
     WlWindowNotFound,
 };
 const WaylandClientLoopError = error{DispatchFailed};
+const WaylandClientDrawError = error{NotInitialized};
 const AddListenerError = error{AddListenerFailed};
 
 pub const WlClient = struct {
@@ -87,6 +89,8 @@ pub const WlClient = struct {
         if (roundtrip_result == -1) {
             return error.RoundtripFailed;
         }
+
+        // Need to ensure initial window size is set before this is called
         try wlShm.initBuffer(window.width, window.height);
 
         wl.wl_surface_attach(surface, wlShm.buffer, 0, 0);
@@ -115,5 +119,12 @@ pub const WlClient = struct {
         if (wl.wl_display_dispatch(self.display.display) < 0) {
             return WaylandClientLoopError.DispatchFailed;
         }
+    }
+
+    pub fn draw(self: *WlClient, mtx: mx.PixelMatrix) WaylandClientDrawError!void {
+        if (self.shm.shm_data == null) {
+            return WaylandClientDrawError.NotInitialized;
+        }
+        shm.draw(mtx, self.shm.shm_data.?, self.window.dimensions());
     }
 };

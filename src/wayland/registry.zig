@@ -1,4 +1,4 @@
-const b = @import("binder.zig");
+const b = @import("models/binder.zig");
 const disp = @import("display.zig");
 const io = @import("../io_util.zig");
 const std = @import("std");

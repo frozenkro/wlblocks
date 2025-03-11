@@ -1,9 +1,9 @@
 const std = @import("std");
 const posix = std.posix;
 const os = std.os;
-const b = @import("binder.zig");
+const b = @import("models/binder.zig");
+const dim = @import("models/dimensions.zig");
 const io = @import("../io_util.zig");
-const xdg = @import("xdg.zig");
 const cstd = @cImport({
     @cInclude("stdlib.h");
 });
@@ -171,10 +171,10 @@ fn getRuntimeDir() ShmError![:0]const u8 {
     return path;
 }
 
-pub fn draw(mtx: PixelMatrix, shm_data: [*]u32) void {
-    const x_off = getHrizOffset(mtx.width);
-    const y_off = getVertOffset(mtx.height);
-    var pixel = (y_off.pre * xdg.width) + x_off.pre;
+pub fn draw(mtx: PixelMatrix, shm_data: [*]u32, window_dim: dim.Dimensions) void {
+    const x_off = getHrizOffset(@intCast(mtx.width), window_dim.x);
+    const y_off = getVertOffset(@intCast(mtx.height), window_dim.y);
+    var pixel = (y_off.pre * window_dim.x) + x_off.pre;
 
     for (mtx.rows) |row| {
         for (row) |val| {
@@ -186,20 +186,20 @@ pub fn draw(mtx: PixelMatrix, shm_data: [*]u32) void {
 }
 
 const Offset = struct { pre: usize, post: usize };
-fn getVertOffset(height: usize) Offset {
-    if (xdg.height <= height) {
+fn getVertOffset(height: u32, win_height: u32) Offset {
+    if (win_height <= height) {
         return Offset{ .pre = 0, .post = 0 };
     }
-    const margin = xdg.height - height;
+    const margin = win_height - height;
     const pre = @divTrunc(margin, 2);
     const post = if (margin % 2 == 0) pre else pre + 1;
     return Offset{ .pre = pre, .post = post };
 }
-fn getHrizOffset(width: usize) Offset {
-    if (xdg.width <= width) {
+fn getHrizOffset(width: u32, win_width: u32) Offset {
+    if (win_width <= width) {
         return Offset{ .pre = 0, .post = 0 };
     }
-    const margin = xdg.width - width;
+    const margin = win_width - width;
     const pre = @divTrunc(margin, 2);
     const post = if (margin % 2 == 0) pre else pre + 1;
     return Offset{ .pre = pre, .post = post };
