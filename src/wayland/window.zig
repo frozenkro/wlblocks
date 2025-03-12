@@ -20,7 +20,7 @@ pub const WlWindow = struct {
     resized: bool,
     unknownSize: bool,
 
-    pub var instance: ?*WlWindow = null;
+    pub var instance: ?*WlWindow = null; // todo, un-singleton this
 
     pub fn init(
         allocator: std.mem.Allocator,

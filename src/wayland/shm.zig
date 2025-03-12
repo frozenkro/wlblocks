@@ -28,25 +28,35 @@ const ShmError = error{
 
 pub const AddListenerError = error{AddListenerFailed};
 
-pub const WlShm = struct {
+pub const ShmContext = struct {
     shm: ?*wl.wl_shm,
-    shm_data: ?[*]u32,
+    shm_data: ?[]u32,
     buffer: ?*wl.wl_buffer,
 
-    pub fn init() WlShm {
-        return WlShm{
+    pub var instance: ?*ShmContext = null; //todo, un-singleton this
+
+    pub fn init(allocator: std.mem.Allocator) std.mem.Allocator.Error!void {
+        ShmContext.instance = try allocator.create(ShmContext);
+        ShmContext.instance.?.* = .{
             .shm = null,
             .shm_data = null,
             .buffer = null,
         };
     }
 
+    pub fn deinit(allocator: std.mem.Allocator) void {
+        if (ShmContext.instance == null) {
+            io.print("Warning: Nothing to deinit\n", .{});
+        }
+        allocator.destroy(ShmContext.instance.?);
+    }
+
     fn bind(ptr: *anyopaque, shm: *anyopaque) void {
-        const self: *WlShm = @ptrCast(@alignCast(ptr));
+        const self: *ShmContext = @ptrCast(@alignCast(ptr));
         self.shm = @ptrCast(shm);
     }
 
-    pub fn binder(self: *WlShm) b.Binder {
+    pub fn binder(self: *ShmContext) b.Binder {
         return .{
             .ptr = self,
             .bindFn = bind,
@@ -64,14 +74,14 @@ pub const WlShm = struct {
         .format = shmFormatHandler,
     };
 
-    pub fn setupListeners(self: WlShm) AddListenerError!void {
+    pub fn setupListeners(self: ShmContext) AddListenerError!void {
         const cIntRes = wl.wl_shm_add_listener(self.shm, &shm_listener, null);
         if (cIntRes != 0) {
             return error.AddListenerFailed;
         }
     }
 
-    pub fn initBuffer(self: *WlShm, width: u32, height: u32) CreateBufferError!void {
+    pub fn initBuffer(self: *ShmContext, width: u32, height: u32) CreateBufferError!void {
         if (self.shm == null) {
             return CreateBufferError.ShmNotBound;
         }
@@ -94,7 +104,7 @@ pub const WlShm = struct {
             posix.close(fd);
             return err;
         };
-        self.shm_data = @ptrCast(mmap_result);
+        self.shm_data = std.mem.bytesAsSlice(u32, mmap_result);
 
         const pool: ?*wl.wl_shm_pool = wl.wl_shm_create_pool(self.shm, fd, @intCast(size));
         defer wl.wl_shm_pool_destroy(pool);
@@ -171,7 +181,7 @@ fn getRuntimeDir() ShmError![:0]const u8 {
     return path;
 }
 
-pub fn draw(mtx: PixelMatrix, shm_data: [*]u32, window_dim: dim.Dimensions) void {
+pub fn draw(mtx: PixelMatrix, shm_data: []u32, window_dim: dim.Dimensions) void {
     const x_off = getHrizOffset(@intCast(mtx.width), window_dim.x);
     const y_off = getVertOffset(@intCast(mtx.height), window_dim.y);
     var pixel = (y_off.pre * window_dim.x) + x_off.pre;
