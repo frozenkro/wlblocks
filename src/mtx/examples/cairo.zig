@@ -2,8 +2,8 @@ const std = @import("std");
 const cairo = @cImport({
     @cInclude("cairo.h");
 });
-const io = @import("../io_util.zig");
-const pm = @import("pixel_matrix.zig");
+const io = @import("../../io_util.zig");
+const pm = @import("../pixel_matrix.zig");
 const PixelMatrix = pm.PixelMatrix;
 const PixelMatrixError = pm.PixelMatrixError;
 

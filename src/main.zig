@@ -1,58 +1,10 @@
 const std = @import("std");
 const wc = @import("wayland/client.zig");
 const shm = @import("wayland/shm.zig");
-const cairo = @import("mtx/cairo.zig");
+const cairo = @import("mtx/examples/cairo.zig");
 const colors = @import("mtx/colors.zig");
-const palette = @import("mtx/palette.zig");
-
-const ColorSwapError = error{UnsupportedColor};
-
-fn swapColor(color: u32) ColorSwapError!u32 {
-    if (color == colors.COLOR_BLUE) {
-        return colors.COLOR_BLACK;
-    } else if (color == colors.COLOR_BLACK) {
-        return colors.COLOR_BLUE;
-    }
-    return error.UnsupportedColor;
-}
-
-//fn drawSolid() void {
-//    var data: [*]u32 = @ptrCast(@alignCast(shm.shm_data));
-
-//    var i: u32 = 0;
-//    var y: u32 = 0;
-//    while (y < xdg.height) : (y += 1) {
-//        var x: u32 = 0;
-//        while (x < xdg.width) : (x += 1) {
-//            data[i] = colors.COLOR_BLUE;
-//            i += 1;
-//        }
-//    }
-//}
-
-//fn drawGrid() ColorSwapError!void {
-//    var row_start_color: u32 = colors.COLOR_BLACK;
-//    var color: u32 = row_start_color;
-
-//    var i: u32 = 0;
-//    var y: u32 = 0;
-//    while (y < xdg.height) : (y += 1) {
-//        if (y % 10 == 0) {
-//            row_start_color = try swapColor(row_start_color);
-//        }
-//        color = row_start_color;
-
-//        var x: u32 = 0;
-//        while (x < xdg.width) : (x += 1) {
-//            //data[i] = 0xde000000;
-//            if (x % 10 == 0) {
-//                color = try swapColor(color);
-//            }
-//            shm.shm_data[i] = color;
-//            i += 1;
-//        }
-//    }
-//}
+const palette = @import("mtx/examples/palette.zig");
+const patterns = @import("mtx/examples/patterns.zig");
 
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
@@ -62,15 +14,12 @@ pub fn main() !void {
     var wlclient = try wc.WlClient.init(&alloc);
     defer wlclient.deinit();
 
-    //try drawGrid();
-    //drawSolid();
-    //try cairo.drawPng();
-    // var cat_map = try cairo.createPngMatrix("nyan-cat.png", alloc);
-    // defer cat_map.deinit();
-    // shm.draw(cat_map);
-    var palette_map = try palette.createPaletteMtx(alloc);
-    defer palette_map.deinit();
-    try wlclient.draw(palette_map);
+    // var example_mtx = try patterns.createSolidMatrix(wlclient.window.dimensions(), alloc);
+    var example_mtx = try patterns.createGridMatrix(wlclient.window.dimensions(), alloc);
+    // var example_mtx = try cairo.createPngMatrix("nyan-cat.png", alloc);
+    //var example_mtx = try palette.createPaletteMtx(alloc);
+    defer example_mtx.deinit();
+    try wlclient.draw(example_mtx);
 
     while (true) {
         wlclient.clientLoop() catch {

@@ -1,7 +1,7 @@
-const colors = @import("colors.zig");
+const colors = @import("../colors.zig");
 const std = @import("std");
-const pm = @import("pixel_matrix.zig");
-const win = @import("../wayland/window.zig");
+const pm = @import("../pixel_matrix.zig");
+const win = @import("../../wayland/window.zig");
 const PixelMatrix = pm.PixelMatrix;
 
 const CreatePaletteMtxError = pm.PixelMatrixError || error{WindowNotFound};
