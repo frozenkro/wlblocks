@@ -1,12 +1,12 @@
 const ste = @import("state.zig");
-const mtx = @import("../mtx/pixel_matrix.zig");
+const mtx = @import("../mtx/matrix.zig");
 const std = @import("std");
 
 var delta: u32 = 0;
 var prev_time = std.time.nanoTimestamp();
 var new_time: u32 = 0;
 
-pub fn tick(state: ste.State) void {
+pub fn tick(_: ste.State) void {
     // process physics
     // ...
 

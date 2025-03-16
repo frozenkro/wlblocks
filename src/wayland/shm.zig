@@ -11,7 +11,7 @@ const wl = @cImport({
     @cInclude("wayland-client.h");
 });
 
-const PixelMatrix = @import("../mtx/pixel_matrix.zig").PixelMatrix;
+const PixelMatrix = @import("../mtx/matrix.zig").PixelMatrix;
 
 const CreateAnonymousFileError = std.fmt.BufPrintError || posix.TruncateError || ShmError;
 const CreateBufferError = CreateAnonymousFileError || posix.MMapError;

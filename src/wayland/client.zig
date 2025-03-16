@@ -6,7 +6,7 @@ const reg = @import("registry.zig");
 const comp = @import("compositor.zig");
 const win = @import("window.zig");
 const disp = @import("display.zig");
-const mx = @import("../mtx/pixel_matrix.zig");
+const mx = @import("../mtx/matrix.zig");
 const wl = @cImport({
     @cInclude("wayland-client.h");
 });

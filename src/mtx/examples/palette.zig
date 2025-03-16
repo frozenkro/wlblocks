@@ -1,10 +1,10 @@
 const colors = @import("../colors.zig");
 const std = @import("std");
-const pm = @import("../pixel_matrix.zig");
+const pm = @import("../matrix.zig");
 const win = @import("../../wayland/window.zig");
 const PixelMatrix = pm.PixelMatrix;
 
-const CreatePaletteMtxError = pm.PixelMatrixError || error{WindowNotFound};
+const CreatePaletteMtxError = pm.MatrixError || error{WindowNotFound};
 
 pub fn createPaletteMtx(allocator: std.mem.Allocator) CreatePaletteMtxError!PixelMatrix {
     if (win.WlWindow.instance == null) {

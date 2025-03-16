@@ -1,9 +1,9 @@
 const colors = @import("../colors.zig");
 const dim = @import("../../wayland/models/dimensions.zig");
-const mtx = @import("../pixel_matrix.zig");
+const mtx = @import("../matrix.zig");
 const std = @import("std");
 
-pub fn createSolidMatrix(dimensions: dim.Dimensions, allocator: std.mem.Allocator) mtx.PixelMatrixError!mtx.PixelMatrix {
+pub fn createSolidMatrix(dimensions: dim.Dimensions, allocator: std.mem.Allocator) mtx.MatrixError!mtx.PixelMatrix {
     const buffer = try allocator.alloc(u32, dimensions.x * dimensions.y);
     defer allocator.free(buffer);
     @memset(buffer, colors.COLOR_YELLOW);
@@ -12,7 +12,7 @@ pub fn createSolidMatrix(dimensions: dim.Dimensions, allocator: std.mem.Allocato
     return solid_mtx;
 }
 
-pub fn createGridMatrix(dimensions: dim.Dimensions, allocator: std.mem.Allocator) mtx.PixelMatrixError!mtx.PixelMatrix {
+pub fn createGridMatrix(dimensions: dim.Dimensions, allocator: std.mem.Allocator) mtx.MatrixError!mtx.PixelMatrix {
     const grid_mtx = try mtx.PixelMatrix.init(allocator, dimensions.x, dimensions.y, null);
 
     const grid_size: usize = 20;

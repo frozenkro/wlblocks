@@ -3,12 +3,12 @@ const cairo = @cImport({
     @cInclude("cairo.h");
 });
 const io = @import("../../io_util.zig");
-const pm = @import("../pixel_matrix.zig");
+const pm = @import("../matrix.zig");
 const PixelMatrix = pm.PixelMatrix;
-const PixelMatrixError = pm.PixelMatrixError;
+const MatrixError = pm.MatrixError;
 
 const CairoError = error{SurfaceStatusError};
-const CreatePngMatrixError = CairoError || PixelMatrixError;
+const CreatePngMatrixError = CairoError || MatrixError;
 
 pub fn createPngMatrix(file_name: []const u8, allocator: std.mem.Allocator) CreatePngMatrixError!PixelMatrix {
     const surface = cairo.cairo_image_surface_create_from_png(@ptrCast(file_name));
