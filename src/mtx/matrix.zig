@@ -5,7 +5,7 @@ pub const MatrixError = error{DataSizeMismatch} || std.mem.Allocator.Error;
 pub const PixelMatrix = Matrix(u32);
 pub const CollisionMatrix = Matrix(bool);
 
-fn Matrix(comptime T: type) type {
+pub fn Matrix(comptime T: type) type {
     return struct {
         width: usize,
         height: usize,
@@ -42,6 +42,10 @@ fn Matrix(comptime T: type) type {
         pub fn deinit(self: *Matrix(T)) void {
             self.allocator.free(self.rows);
             self.allocator.free(self.buffer);
+        }
+
+        pub fn MoveMatrix(self: *Matrix(T)) void {
+
         }
     };
 }
