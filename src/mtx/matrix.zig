@@ -44,9 +44,9 @@ pub fn Matrix(comptime T: type) type {
             self.allocator.free(self.buffer);
         }
 
-        pub fn MoveMatrix(self: *Matrix(T)) void {
+        // pub fn MoveMatrix(self: *Matrix(T)) void {
 
-        }
+        // }
     };
 }
 
